@@ -13,14 +13,22 @@ sequencing of libraries was performed with an Illumina HiSeq 1000 Sequencer. The
 were then clustered and aligned to Malus domestica CDS sequences from the NCBI Nucleotide database. 
 Data obtained is an excel file with FPKM values for each sample. 
 Each cultivar is reported in a distinct sheet.
+Link to data:
+https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE182822
+
+Folder structure:
+The folder "data_and_analysis" contains the excel data file with the FPKM values for each sample named "GSE182822_Matrix_FPKM.xlsx," as well as the jupyter notebook 
+"Apple_Data_Exploratory_Analysis.ipynb" that is used to generate the heatmap "apple_top_20_ctrl_h_genes_heatmap.png" from the data.
 
 Installation:
-The "Apple_Data.ipynb" jupyter notebook will generate different heatmaps of the genes expression of 
-three different breeds of apples (Granny Smith, Golden Delicious, Fuji).
+The "Apple_Data_Exploratory_Analysis.ipynb" jupyter notebook will generate 
+different heatmaps of the genes expression of three different breeds of apples 
+(Granny Smith, Golden Delicious, Fuji).
 
 To generate a heatmap of the 20 most highly expressed genes of the apple 
-breeds at time of harvest, open the "Apple_Data.ipynb" jupyter notebook and 
-run all the cells. Running all the cells will automatically generate this heatmap that is then 
+breeds at time of harvest, open the "Apple_Data_Exploratory_Analysis.ipynb" 
+jupyter notebook and run all the cells. 
+Running all the cells will automatically generate this heatmap that is then 
 saved as the "apple_top_20_ctrl_h_genes_heatmap.png" image file. 
 
 To run the code, you will need to have Ananconda Jupyter Lab installed with the relevant packages.
