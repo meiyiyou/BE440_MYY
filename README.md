@@ -33,10 +33,11 @@ saved as the "apple_top_20_ctrl_h_genes_heatmap.png" image file.
 
 To run the code, you will need to have Ananconda Jupyter Lab installed with the relevant packages.
 Relevant packages and versions are listed below:
-Python implementation: CPython
-Python version       : 3.9.13
-IPython version      : 7.31.1
 
+Python implementation: CPython
+
+Python version       : 3.9.13 
+IPython version      : 7.31.1
 numpy     : 1.22.2
 pandas    : 1.5.2
 bokeh     : 2.4.3
