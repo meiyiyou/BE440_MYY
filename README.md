@@ -17,8 +17,8 @@ Link to data:
 https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE182822
 
 Folder structure:
-The folder "data_and_analysis" contains the excel data file with the FPKM values for each sample named "GSE182822_Matrix_FPKM.xlsx," as well as the jupyter notebook 
-"Apple_Data_Exploratory_Analysis.ipynb" that is used to generate the heatmap "apple_top_20_ctrl_h_genes_heatmap.png" from the data.
+The "data" folder contains the excel data file with the FPKM values for each sample named "GSE182822_Matrix_FPKM.xlsx".
+The "code" folder contains the jupyter notebook "Apple_Data_Exploratory_Analysis.ipynb" that is used to generate the heatmap "apple_top_20_ctrl_h_genes_heatmap.png" that can be found in the "data" folder.
 
 Installation:
 The "Apple_Data_Exploratory_Analysis.ipynb" jupyter notebook will generate 
