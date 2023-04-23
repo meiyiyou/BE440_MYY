@@ -3,3 +3,4 @@ venv
 *.npy
 logging.txt
 __pycache__
+test
