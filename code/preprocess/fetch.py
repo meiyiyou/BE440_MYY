@@ -26,6 +26,7 @@ from abc import ABC, abstractmethod
 import logging
 import pprint
 import re
+import os
 
 import Bio.GenBank.Record
 from Bio import SeqIO
@@ -101,15 +102,18 @@ class Preprocessor(ABC):
 
         keywords = set()
         go_gene_set = set()
-        for keyword in entry["keywords"]:
-            if (cat := keyword["category"]) in ontologies.keys():
-                keywords.add(f"{ontologies[cat]}:{keyword['name']}")
 
-        for x_ref in entry["uniProtKBCrossReferences"]:
-            if x_ref["database"] == "GO":
-                for prop in x_ref["properties"]:
-                    if prop["key"] == "GoTerm":
-                        go_gene_set.add(prop["value"])
+        if "keywords" in entry.keys():
+            for keyword in entry["keywords"]:
+                if (cat := keyword["category"]) in ontologies.keys():
+                    keywords.add(f"{ontologies[cat]}:{keyword['name']}")
+
+        if "uniProtKBCrossReferences" in entry.keys():
+            for x_ref in entry["uniProtKBCrossReferences"]:
+                if x_ref["database"] == "GO":
+                    for prop in x_ref["properties"]:
+                        if prop["key"] == "GoTerm":
+                            go_gene_set.add(prop["value"])
 
         return keywords, go_gene_set # TODO: Consider making this a dict that later gets unpacked
     
@@ -144,7 +148,7 @@ class NcbiPreprocessor(Preprocessor):
             if feature.type == "CDS":
                 cds_feature = feature
         
-
+        os.remove(gb_path)
         return cds_feature.qualifiers if cds_feature else None
 
     def _03_format_fetched_data(self, raw_data):
@@ -166,7 +170,7 @@ class NcbiPreprocessor(Preprocessor):
         url_base="https://rest.uniprot.org/uniprotkb/search?query="
         while r is None:
             try:
-                print(f"{url_base}{product_search_term}&format=json")
+                # print(f"Querying NCBI... {url_base}{product_search_term}&format=json", end="\r")
                 r = requests.get(f"{url_base}{product_search_term}&format=json").json()
                 entries = r["results"] # Multiple results can be returned for a given query
                 entry = entries[0] if len(entries) > 0 else None
@@ -176,16 +180,21 @@ class NcbiPreprocessor(Preprocessor):
         if entry:
             keywords, go_gene_set = self._get_gene_sets(entry) 
             uni_data = {
-                "keywords": keywords,
-                "go_gene_set": go_gene_set,
+                "keywords": ",".join(list(keywords)),
+                "go_gene_set": ",".join(list(go_gene_set)),
                 "protein_existence": entry["proteinExistence"],
                 "primary_accession": entry["primaryAccession"],
                 "uniProtkbId": entry["uniProtkbId"]
             }
             return uni_data
         else:
-            return {}
-            
+            return {
+                "keywords": None,
+                "go_gene_set": None,
+                "protein_existence": None,
+                "primary_accession": None,
+                "uniProtkbId": None
+            }
         
 class UniprotPreprocessor(Preprocessor):
     def _01_load_data_source(
@@ -211,8 +220,8 @@ class UniprotPreprocessor(Preprocessor):
     def _03_format_fetched_data(self, raw_data):
         keywords, go_gene_set = self._get_gene_sets(raw_data)
         formatted_data = FetchedData({
-            "keywords": keywords,
-            "go_gene_set": go_gene_set,
+            "keywords": ",".join(list(keywords)),
+            "go_gene_set": ",".join(list(go_gene_set)),
             "protein_existence": raw_data["proteinExistence"],
             "primary_accession": raw_data["primaryAccession"],
             "uniProtkbId": raw_data["uniProtkbId"],
@@ -237,6 +246,6 @@ if __name__ == "__main__":
     logging.basicConfig(filename="./data/test/logging.txt",
                         level=logging.INFO)
 
-    test_accessions = ["XM_008389256", "XM_008368189", "XM_008360699"]
+    test_accessions = ["AY742293", "XM_008389256", "XM_008368189", "XM_008360699", "XM_008348163"]
     for test in test_accessions:
         pprint.pprint(get_fetched_data(test))

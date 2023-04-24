@@ -1,3 +1,6 @@
+import pprint
+import numpy as np
+
 def clean_intermediates(properties=["primaryAccession", "uniProtkbId", "protein", "proteinExistence", "progress"]):
     for prop in properties:
         if os.path.exists(f"./data/processed/02_{prop}.npy"):
