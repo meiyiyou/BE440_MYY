@@ -1,7 +1,7 @@
 import pprint
 import numpy as np
 
-def clean_intermediates(properties=["primaryAccession", "uniProtkbId", "protein", "proteinExistence", "progress"]):
+def clean_intermediates(properties=["keywords", "go_gene_set", "protein_existence", "primary_accession", "uniProtkbId", "protein", "pipeline", "progress"]):
     for prop in properties:
         if os.path.exists(f"./data/processed/02_{prop}.npy"):
             os.remove(f"./data/processed/02_{prop}.npy")
