@@ -4,3 +4,5 @@ venv
 logging.txt
 __pycache__
 test
+nohup.out
+data/processed/*

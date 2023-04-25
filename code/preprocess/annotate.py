@@ -6,6 +6,8 @@ import logging
 import os
 import sys
 import time
+from contextlib import redirect_stdout
+import io
 
 from . import fetch
 
@@ -43,6 +45,7 @@ def collect_fpkm_annotations(input_xlsx,
                             autosave_interval_count=5) -> None:
     """Update table with annotations of proteins and genes associated with FPKM mRNA readout"""
     
+    print(f"Loading {input_xlsx} into pandas DataFrame...", end="\r")
     df = pd.read_excel(input_xlsx, sheet_name="GrannySmith_GS")
     num_entries = np.size(df,0)
 

@@ -1,5 +1,11 @@
 import pprint
 import numpy as np
+import os
+import time
+import logging
+
+import Bio
+from Bio import SeqIO
 
 def clean_intermediates(properties=["keywords", "go_gene_set", "protein_existence", "primary_accession", "uniProtkbId", "protein", "pipeline", "progress"]):
     for prop in properties:
@@ -20,3 +26,15 @@ def parse_gb() -> list[dict]:
         "organism": gb_record.annotations["organism"],
 
     }]
+
+def use_timer(func):
+    def timer(*args, **kwargs):
+        t_0 = time.time.now()
+        func(*args, **kwargs)
+        t_1 = time.time.now()
+        print(f"Execution of {func.__name__!r} took {(t_1 - t_0):.4f} seconds.")
+    
+    return timer
+
+if __name__ == "__main__":
+    load_and_print_npy("./data/processed/02_progress.npy")
