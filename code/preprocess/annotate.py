@@ -41,7 +41,7 @@ def preprocess_gene_id_column(input_xlsx,
 
 def collect_fpkm_annotations(input_xlsx,
                             properties,
-                            progress_file_path="./data/processed/02_progress.npy", 
+                            progress_file_path="./data/processed/02_intermediates/02_progress.npy", 
                             autosave_interval_count=5) -> None:
     """Update table with annotations of proteins and genes associated with FPKM mRNA readout"""
     

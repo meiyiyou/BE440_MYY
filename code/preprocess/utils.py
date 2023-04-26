@@ -7,10 +7,15 @@ import logging
 import Bio
 from Bio import SeqIO
 
-def clean_intermediates(properties=["keywords", "go_gene_set", "protein_existence", "primary_accession", "uniProtkbId", "protein", "pipeline", "progress"]):
+def clean_intermediates(
+    properties=[
+        "keywords", "go_gene_set", "protein_existence", "primary_accession", 
+        "uniProtkbId", "protein", "pipeline", "progress"],
+    intermediates_dir=f"./data/processed/02_intermediates"):
+
     for prop in properties:
-        if os.path.exists(f"./data/processed/02_{prop}.npy"):
-            os.remove(f"./data/processed/02_{prop}.npy")
+        if os.path.exists(f"{intermediates_dir}/02_{prop}.npy"):
+            os.remove(f"{intermediates_dir}/02_{prop}.npy")
 
 def load_and_print_npy(npy_path):
     pprint.pprint(np.load(npy_path))

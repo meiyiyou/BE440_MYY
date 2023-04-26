@@ -16,6 +16,7 @@ import logging
 import pandas as pd
 import numpy as np
 import re
+import sys
 
 def gene_setter(input_xlsx, output_dir, gene_ontologies) -> None:
     """
@@ -27,6 +28,11 @@ def gene_setter(input_xlsx, output_dir, gene_ontologies) -> None:
     Returns:
         None. Will save a xlsx file that only has gene of a particular set.
     """
+
+    def make_xlsx(input_df, gene_set, go, output_dir):
+        output = input_df[input_df["accession_number"].isin(gene_set)]
+        output.to_excel(f"{output_dir}/{go}.xlsx", index=False)
+
     # STEP 1: 
     df_total = pd.read_excel(input_xlsx, sheet_name="GrannySmith_GS")
     for go in gene_ontologies:
@@ -35,19 +41,22 @@ def gene_setter(input_xlsx, output_dir, gene_ontologies) -> None:
         for i, entry in df_total.iterrows():
             go_gene_set = entry["go_gene_set"]
             if type(go_gene_set) is str:
-                # if re.search(go, go_gene_set):
-                #     # print(go)
-                #     # print(entry["go_gene_set"])
                 if re.search(go, go_gene_set):
-                    # print(entry["accession_number"])
                     gene_set_members[i] = entry["accession_number"]
 
             if i % 250 == 1:
-                print(f"{go}: {round(i / NUM_ENTRIES),2}%...", end="\r")
+                sys.stdout.write("\033[K") #clear line 
+                print(f"{go}: {round(i / NUM_ENTRIES * 100),2}%", end="\r")
 
         output = [gene for gene in gene_set_members[:,0] if gene != ""]
         with open(f"{output_dir}/{go}.txt", "w+") as f:
             f.write("\n".join(output))
+        
+        make_xlsx(df_total, set(output), go, output_dir)
+
+
+    sys.stdout.write("\033[K") #clear line 
+    print("\033[92m Done making gene sets!\033[0m")        
 
 if __name__ == "__main__":
     gene_set_logger = logging.Logger(name="./data/test/gene_set_logger.txt")

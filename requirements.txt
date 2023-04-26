@@ -6,3 +6,6 @@ holoviews==1.15.3
 requests==2.28.2
 openpyxl==3.1.2
 biopython==1.81
+networkx==3.1
+scipy==1.10.1
+matplotlib
