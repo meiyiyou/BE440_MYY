@@ -15,29 +15,29 @@ def preprocess_gene_id_column(input_xlsx,
                               output_xlsx="data/test_output.xlsx") -> None:
     """Update original raw FPKM data to split the GENE_ID column
     """ 
-    for sheet in ["GrannySmith_GS", "GoldenDelicious_GD", "Fuji_Fj"]:
-        df = pd.read_excel(input_xlsx, sheet_name=sheet)
-        gi = np.empty(np.size(df,0), dtype=np.dtype("U32"))
-        database = np.empty(np.size(df, 0), dtype=np.dtype("U32"))
-        accession_number = np.empty(np.size(df, 0), dtype=np.dtype("U32"))
-        version = np.empty(np.size(df, 0))
-
-        for i, row in enumerate(df.loc[:, "GENE_ID"]):
-            gi[i] = re.search("gi\|(\d+?)\|", row).group(1)
-            database[i] = re.search("gi\|\d+\|(.+?)\|", row).group(1)
-            accession_number[i] = re.search("gi\|\d+\|\w+\|(\w+?),", row).group(1)
-            version[i] = re.search("gi\|\d+\|\w+\|\w+?,(.+?)\|", row).group(1)
-
-        df_output = pd.DataFrame({
-            "gi": gi,
-            "database": database,
-            "accession_number": accession_number,
-            "accession_version": version,    
-        })
-
     with pd.ExcelWriter(output_xlsx) as writer:
-        df_output = df_output.join(df.iloc[:,1:])
-        df_output.to_excel(writer, sheet_name=sheet, index=False)
+        for sheet in ["GrannySmith_GS", "GoldenDelicious_GD", "Fuji_Fj"]:
+            df = pd.read_excel(input_xlsx, sheet_name=sheet)
+            gi = np.empty(np.size(df,0), dtype=np.dtype("U32"))
+            database = np.empty(np.size(df, 0), dtype=np.dtype("U32"))
+            accession_number = np.empty(np.size(df, 0), dtype=np.dtype("U32"))
+            version = np.empty(np.size(df, 0))
+
+            for i, row in enumerate(df.loc[:, "GENE_ID"]):
+                gi[i] = re.search("gi\|(\d+?)\|", row).group(1)
+                database[i] = re.search("gi\|\d+\|(.+?)\|", row).group(1)
+                accession_number[i] = re.search("gi\|\d+\|\w+\|(\w+?),", row).group(1)
+                version[i] = re.search("gi\|\d+\|\w+\|\w+?,(.+?)\|", row).group(1)
+
+            df_output = pd.DataFrame({
+                "gi": gi,
+                "database": database,
+                "accession_number": accession_number,
+                "accession_version": version,    
+            })
+
+            df_output = df_output.join(df.iloc[:,1:])
+            df_output.to_excel(writer, sheet_name=sheet, index=False)
 
 def collect_fpkm_annotations(input_xlsx,
                             properties,
@@ -112,7 +112,7 @@ def _load_data_addons(input_df, properties) -> dict:
     NUM_ENTRIES = np.size(input_df, 0)
     
     def load_values(prop, num_entries=NUM_ENTRIES, data_type="U32"):
-        property_path = f"./data/processed/02_{prop}.npy"
+        property_path = f"./data/processed/02_intermediates/02_{prop}.npy"
         match prop:
             case "keywords":
                 data_type = "U256"
@@ -133,7 +133,7 @@ def _load_data_addons(input_df, properties) -> dict:
 
 def _save_data_addons(data_addons):
     for prop in data_addons.keys():
-        np.save(f"./data/processed/02_{prop}.npy", data_addons[prop])
+        np.save(f"./data/processed/02_intermediates/02_{prop}.npy", data_addons[prop])
 
 def _load_progress_index(progress_file_path):
     if os.path.exists(progress_file_path):
@@ -146,8 +146,19 @@ def _save_progress_index(progress_index, progress_file_path):
     np.save(progress_file_path, np.array([progress_index]))
 
 if __name__ == "__main__":
-    input_file = "./data/processed/01_processed_fpkm.xlsx"
-    output_file = "./data/processed/02_annotated_fpkm.xlsx"
-    properties=["keywords", "go_gene_set", "protein_existence", "primary_accession", "uniProtkbId", "protein", "pipeline"]
-    collect_fpkm_annotations(input_file, properties=properties, autosave_interval_count=25)
-    preprocess_fpkm_annotations(input_file, properties=properties)
+    # input_file = "./data/processed/01_processed_fpkm.xlsx"
+    # output_file = "./data/processed/02_annotated_fpkm.xlsx"
+    properties=[
+        "keywords", "go_gene_set", "protein_existence", 
+        "primary_accession", "uniProtkbId", "protein", "pipeline"]
+    preprocess_gene_id_column(
+        "./data/test/test_GSE182822_Matrix_FPKM.xlsx", 
+        output_xlsx="./data/test/test_01_processed_fpkm.xlsx")
+    collect_fpkm_annotations(
+        input_xlsx="./data/test/test_01_processed_fpkm.xlsx", 
+        properties=properties, 
+        autosave_interval_count=25)
+    preprocess_fpkm_annotations(
+        input_xlsx="./data/test/test_01_processed_fpkm.xlsx", 
+        output_xlsx="./data/test/test_02_annotated_fpkm.xlsx",
+        properties=properties)
