@@ -87,13 +87,17 @@ def generate_gmt():
 if __name__ == "__main__":
     # gene_set_logger = logging.Logger(name="./data/test/gene_set_logger.txt")
     # gene_set_logger.setLevel(logging.INFO)
-    # input_xlsx = "./data/processed/02_annotated_fpkm_v3.xlsx"
-    # output_dir = "./data/test/03_gene_sets"
-    # gene_ontologies = ["P:auxin-activated signaling pathway", "P:ethylene-activated signaling pathway"]
-    # gene_setter(input_xlsx, output_dir, gene_ontologies)
+    input_xlsx = "./data/processed/02_annotated_fpkm_v3.xlsx"
+    output_dir = "./data/processed/03_gene_sets"
+    gene_ontologies = ["P:auxin-activated signaling pathway", 
+                       "P:ethylene-activated signaling pathway", 
+                       "P:cytokinin-activated signaling pathway",
+                       "P:jasmonic acid mediated signaling pathway",
+                       "P:Golgi to plasma membrane transport"]
+    gene_setter(input_xlsx, output_dir, gene_ontologies)
 
     # Testing generate_gmt
-    generate_gmt()
+    # generate_gmt()
 
 
 
