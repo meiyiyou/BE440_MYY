@@ -26,7 +26,7 @@ def gene_setter(input_xlsx, output_dir, gene_ontologies) -> None:
         gene_ontologies: List of strings that correspond to gene ontologies that you want sets of
 
     Returns:
-        None. Will save a xlsx file that only has gene of a particular set.
+        None. Will save a xlsx file that only has gene of a particular set at output_dir
     """
 
     def make_xlsx(input_df, gene_set, go, output_dir):
@@ -56,16 +56,44 @@ def gene_setter(input_xlsx, output_dir, gene_ontologies) -> None:
 
 
     sys.stdout.write("\033[K") #clear line 
-    print("\033[92m Done making gene sets!\033[0m")        
+    print("\033[92m Done making gene sets!\033[0m")   
 
+def generate_gmt():
+    properties = {
+        "P:auxin-activated signaling pathway": "auxin_title",
+        "P:ethylene-activated signaling pathway": "ethylene_title"
+    }
+    df_gmt = pd.read_excel("./data/raw/go_sets.xlsx")
+    df = pd.DataFrame({})
+    for i, (prop, title) in enumerate(properties.items()):
+        df_go = pd.read_excel(f"./data/processed/03_gene_sets/{prop}.xlsx")
+        accession_numbers = df_go["accession_number"]
+        series_go = pd.concat([pd.Series("description"), accession_numbers], axis=0, ignore_index=True).to_frame(name=title)
+        df = pd.concat([df, series_go], axis=1)
+        # df_ethylene = pd.read_excel("./data/processed/03_gene_sets/.xlsx")
+    # print(df_gmt)
+    
+    # series_ethylene = pd.concat([pd.Series("eth"), df_ethylene["accession_number"]], axis=0)
+
+    # df_total = pd.DataFrame({
+    #     "ethylene_signaling": series_ethylene,
+    #     "auxin_signaling": series_auxin
+    # }).reset_index()
+    df = df.transpose()
+    # df.drop(index=df.index[0], axis=0, inplace=True)
+    df.to_excel("./data/processed/03_gene_sets/test.xlsx", index=True)
+    # BUG: After generating the file, you have to delete the first row of the excel file
+    # print(df)
 if __name__ == "__main__":
-    gene_set_logger = logging.Logger(name="./data/test/gene_set_logger.txt")
-    gene_set_logger.setLevel(logging.INFO)
-    input_xlsx = "./data/processed/02_annotated_fpkm_v3.xlsx"
-    output_dir = "./data/test/03_gene_sets"
-    gene_ontologies = ["P:auxin-activated signaling pathway", "P:ethylene-activated signaling pathway"]
-    gene_setter(input_xlsx, output_dir, gene_ontologies)
+    # gene_set_logger = logging.Logger(name="./data/test/gene_set_logger.txt")
+    # gene_set_logger.setLevel(logging.INFO)
+    # input_xlsx = "./data/processed/02_annotated_fpkm_v3.xlsx"
+    # output_dir = "./data/test/03_gene_sets"
+    # gene_ontologies = ["P:auxin-activated signaling pathway", "P:ethylene-activated signaling pathway"]
+    # gene_setter(input_xlsx, output_dir, gene_ontologies)
 
+    # Testing generate_gmt
+    generate_gmt()
 
 
 
