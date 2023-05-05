@@ -105,6 +105,7 @@ def preprocess_fpkm_annotations(input_xlsx,
 
     with pd.ExcelWriter(output_xlsx) as writer:
         for sheet in ["GrannySmith_GS", "GoldenDelicious_GD", "Fuji_Fj"]:
+            #BUG: Need to get the unique expression data of each sheet
             df_output = df_input.join(df_addons)
             df_output.to_excel(writer, sheet_name=sheet, index=False)
 
@@ -148,6 +149,7 @@ def _save_progress_index(progress_index, progress_file_path):
 if __name__ == "__main__":
     # input_file = "./data/processed/01_processed_fpkm.xlsx"
     # output_file = "./data/processed/02_annotated_fpkm.xlsx"
+    #BUG: Need to get the unique expression data of each sheet
     properties=[
         "keywords", "go_gene_set", "protein_existence", 
         "primary_accession", "uniProtkbId", "protein", "pipeline"]

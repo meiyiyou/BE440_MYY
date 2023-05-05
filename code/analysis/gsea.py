@@ -17,6 +17,7 @@ import seaborn as sns
 
 import itertools
 import sys
+import pprint
 
 def compute_corr(
     gene_set_paths=[
@@ -132,7 +133,8 @@ def gsea(
     gene_set_paths: dict[str, str],
     is_ctrl: bool,
     title_gsea: str,
-    title_heatmap: str,):
+    title_heatmap: str,
+    plot_enabled: bool=True):
     """Outputs GSEA data
 
     The steps involved with GSEA go as follows:
@@ -146,7 +148,7 @@ def gsea(
         df_list = []
 
         for gene_set, gene_path in gene_set_paths.items():
-            df_gene_set = pd.read_excel(f"./data/processed/03_gene_sets/{gene_path}")
+            df_gene_set = pd.read_excel(f"./data/processed/03_gene_sets/{gene_path}.xlsx")
             df_gene_set["gene_set"] = pd.Series(gene_set, index=range(np.size(df_gene_set,0)))
             df_list.append(df_gene_set)
 
@@ -166,7 +168,7 @@ def gsea(
     
         result = dict()
         for gene_set_name, gene_set_path in gene_set_paths.items():
-            df_gene_set = pd.read_excel(f"{path_base_dir}{gene_set_path}")
+            df_gene_set = pd.read_excel(f"{path_base_dir}{gene_set_path}.xlsx")
             result[gene_set_name] = set(df_gene_set["accession_number"])
         
         return result
@@ -261,7 +263,7 @@ def gsea(
             - df_es: Each column contains the running cumulatives enrichment score
         """
         df_output = pd.DataFrame()
-        
+
         for gene_set_name, gene_set in gene_sets.items():
             es_cum: float = 0
             es = [es_cum]
@@ -274,8 +276,49 @@ def gsea(
                     es_cum -= p_miss
                 es.append(es_cum)
             df_output[gene_set_name] = es
-        return df_output
+
+        max_es = np.array([[gene_set_name, max(min(df_output.loc[:,gene_set_name]), max(df_output.loc[:,gene_set_name]), key=abs)] for gene_set_name, gene_set in gene_sets.items()])
+        return df_output, max_es
         
+    
+    def calculate_rand_es_distribution(df, gene_sets, p, num_rand_samples: int=10):
+        # enrichment_scores = np.zeros((len(gene_sets), num_rand_samples))
+        num_gene_sets = len(gene_sets)
+        gene_set_names = np.empty((num_gene_sets*num_rand_samples), dtype=np.dtype("U32"))
+        enrichment_scores = np.empty((num_gene_sets*num_rand_samples), dtype=np.float64)
+        for i in range(num_rand_samples):
+            print(f"Random ES Distribution Progress: {i} of {num_rand_samples} ({round(i/num_rand_samples*100, 2)}%)", end="\r")
+            _, max_es = calculate_enrichment_score(df.sample(frac=1).reset_index(drop=True), gene_sets=gene_sets, p=p)
+            enrichment_scores[i*num_gene_sets:(i+1)*num_gene_sets] = max_es[:,1]
+            gene_set_names[i*num_gene_sets:(i+1)*num_gene_sets] = max_es[:,0]
+            sys.stdout.write("\033[K")
+        
+        df_rand_es_distribution = pd.DataFrame({
+            "gene_set_name": gene_set_names,
+            "es": enrichment_scores
+        })
+
+        # df_rand_es_distribution.to_csv("./data/processed/random_enrichment_score_distribution.csv")
+        sns.histplot(data=df_rand_es_distribution, x="es", hue="gene_set_name", element="step")
+        plt.show()
+        return df_rand_es_distribution
+    
+    def calculate_es_p_values(max_es, df_rand_es_distribution: pd.DataFrame, gene_sets):
+        # df_pivot = df_rand_es_distribution.pivot(columns="gene_set_name", values="es")
+        # print(df_pivot)
+        output =[]
+        for i, (gene_set_name, gene_set) in enumerate(gene_sets.items()):
+            df_es_gene_set = df_rand_es_distribution[df_rand_es_distribution["gene_set_name"] == gene_set_name]
+            cum_count = 0
+            for count, bin_edge in np.histogram(df_es_gene_set["es"].values):
+                if bin_edge < max_es[i]:
+                    cum_count += counts
+                else:
+                    break
+            output.append(cum_count)
+
+        return output
+
     df_expressions_gene_sets = retrieve_expression_data(gene_set_paths=gene_set_paths)
     gene_sets = get_gene_sets(gene_set_paths)
     df_corrs, df_expressions, gene_sets = calculate_phenotype_correlation(df_expressions_gene_sets, 
@@ -292,33 +335,39 @@ def gsea(
         
     ranked_list = normalize_expressions(expressions)
 
-    plt.figure("Heat map")
-    sns.heatmap(ranked_list[:,1:], cmap="vlag")
-    plt.title(title_heatmap)
+    df_es, max_es = calculate_enrichment_score(sorted_df_corrs, gene_sets=gene_sets, p=1)
+    # df_es_random = calculate_enrichment_score(sorted_df_corrs.sample(frac=1).reset_index(drop=True), gene_sets=gene_sets, p=1)
+    # plt.plot(df_es_random.loc[:,gene_set_paths.keys()])
 
-    plt.figure("GSEA")
-    df_es = calculate_enrichment_score(sorted_df_corrs, gene_sets=gene_sets, p=1)
-    df_es_random = calculate_enrichment_score(sorted_df_corrs.sample(frac=1).reset_index(drop=True), gene_sets=gene_sets, p=1)
-    plt.plot(df_es_random.loc[:,gene_set_paths.keys()])
-    plt.title(title_gsea)
-    # plt.plot(df_es.loc[:,gene_set_paths.keys()])
-    # plt.legend(gene_set_paths.keys())
-    plt.show()
+    # df_rand_es_distribution = calculate_rand_es_distribution(df_corrs, gene_sets, p=1)
+    # calculate_es_p_values(max_es, df_rand_es_distribution)
+
+    if plot_enabled:
+        plt.figure("Heat map")
+        sns.heatmap(ranked_list[:,1:], cmap="vlag")
+        plt.title(title_heatmap)
+
+        plt.figure("GSEA")
+        plt.title(title_gsea)
+        plt.plot(df_es.loc[:,gene_set_paths.keys()])
+        plt.legend(gene_set_paths.keys())
+        plt.show()
 
 if __name__ == "__main__":
     # compute_corr()
     # graph_corr([], "./data/processed/03_gene_sets/corr_matrix_ctrl.npy", title="Ethylene-Auxin Crosstalk Network After Ethylene-Receptor Inhibition")
     phenotype_golden_delicious_ctrl = [3, 0, 2.0349, 43.3721, 56.09, 52.0930]
     gene_set_paths = {
-            "auxin_signaling": "P:auxin-activated signaling pathway.xlsx", 
-            "ethylene_signaling": "P:ethylene-activated signaling pathway.xlsx",
-            "cytokinin_signaling": "P:cytokinin-activated signaling pathway.xlsx",
-            "jasmonic_acid_mediation": "P:jasmonic acid mediated signaling pathway.xlsx",
-            "golgi_membrane_txport": "P:Golgi to plasma membrane transport.xlsx"}
+            "auxin_signaling": "P:auxin-activated signaling pathway", 
+            "ethylene_signaling": "P:ethylene-activated signaling pathway",
+            "cytokinin_signaling": "P:cytokinin-activated signaling pathway",
+            "jasmonic_acid_mediation": "P:jasmonic acid mediated signaling pathway",
+            "golgi_membrane_txport": "P:Golgi to plasma membrane transport"}
     is_ctrl = True
     gsea(
         phenotype=phenotype_golden_delicious_ctrl,
         gene_set_paths=gene_set_paths,
         is_ctrl=is_ctrl,
         title_heatmap="Granny Smith Control Ethylene vs Auxin",
-        title_gsea="GSEA")
+        title_gsea="GSEA",
+        plot_enabled=True)
