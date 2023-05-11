@@ -15,8 +15,7 @@ gene_set_paths = {
         "Gibberellin signaling": "P:gibberellin mediated signaling pathway",
         "Abscisic acid signaling": "P:abscisic acid-activated signaling pathway",
         "Brassinosteroid signaling": "P:brassinosteroid mediated signaling pathway",
-        "Salicylic acid signaling": "P:salicylic acid mediated signaling pathway",
-        "Cell communication": "P:cell communication"}
+        "Salicylic acid signaling": "P:salicylic acid mediated signaling pathway"}
         
 @click.group()
 @click.pass_context
@@ -64,6 +63,11 @@ def go_network(ctx, compute_corr, compute_path, corr_path, corr_title):
     if compute_corr:
         network.compute_corr(gene_set_paths=gene_set_paths)
     network.graph_corr(corr_matrix_file=corr_path, title=corr_title)
+
+@cli.command()
+@click.pass_context
+def graph_dotplot(ctx):
+    gs.dotplot()
 
 if __name__ == "__main__":
     config_project = None
