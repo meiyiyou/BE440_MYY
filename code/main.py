@@ -28,14 +28,16 @@ def cli(ctx):
 @click.option("--is_ethylene", default=True, help="Whether you're interested in looking hormone phenotype")
 @click.option("--cultivar", default="golden_delicious")
 @click.option("--plot/--no-plot", default=True, help="enables plotting")
-def gsea(ctx, is_ctrl, is_ethylene, cultivar, plot):
+@click.option("--calculate-rand/--no-calculate-rand", default=False, help="Whetheror not you want to recalculate random distributions")
+def gsea(ctx, is_ctrl, is_ethylene, cultivar, plot, calculate_rand):
     phenotype_golden_delicious_ctrl = [3, 0, 2.0349, 43.3721, 56.09, 52.0930]
     gs.gsea(
         phenotype=phenotype_golden_delicious_ctrl,
         is_ctrl=is_ctrl,
         gene_set_paths=gene_set_paths,
-        title_gsea="Testing CLI",
-        title_heatmap="Test heatmap",
+        calculate_rand=calculate_rand,
+        title_gsea="GSEA - Hormone-mediated signaling gene sets",
+        title_heatmap="Ranked heat map",
         plot_enabled=plot
     )
 
@@ -73,24 +75,4 @@ if __name__ == "__main__":
     config_project = None
     with open("config.toml", "rb") as f:
         config_project = tomllib.load(f)
-    # print(data)
     cli(obj=config_project)
-    # logging.basicConfig(filename="./data/test/logging.txt",
-    #                     level=logging.ERROR)
-
-    # logging.error(f"Starting session at {datetime.datetime.now()}")
-    # #utils.clean_intermediates()
-    # input_file = "./data/processed/01_processed_fpkm_.xlsx"
-    # path_annotated_fpkm = "./data/processed/02_annotated_fpkm_v3.xlsx"
-    # properties=[
-    #     "keywords", "go_gene_set", "protein_existence", 
-    #     "primary_accession", "uniProtkbId", "protein", "pipeline"]
-    # # annotate.collect_fpkm_annotations(input_file, properties=properties, autosave_interval_count=25)
-    # # annotate.preprocess_fpkm_annotations(input_file, output_xlsx=path_annotated_fpkm, properties=properties)
-
-    # gene_ontologies = [
-    #     "P:ethylene-activated signaling pathway",
-    #     "P:auxin-activated signaling pathway"]
-        
-    # path_go_output_dir = "./data/processed/03_gene_sets"
-    # gene_sets.gene_setter(input_xlsx=path_annotated_fpkm, output_dir=path_go_output_dir, gene_ontologies=gene_ontologies)

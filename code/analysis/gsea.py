@@ -20,122 +20,15 @@ import itertools
 import sys
 import pprint
 
-def compute_corr(
-    gene_set_paths=[
-        "P:auxin-activated signaling pathway.xlsx", 
-        "P:ethylene-activated signaling pathway.xlsx"],
-    is_mcp=False,
-    progress_increment=1000):
-    """PLAN
-    1. Auxin and Ethylene GO next to each other as super node anchors
-    2. The nodes are the individual XM_
-    3. The edges are their correlations to each other. Have to do threshold
-    4. (maybe) remove Nodes that don't have any edges
-    5. Identify the nodes that are in both Auxin and Ethylene
-
-    """
-    df_list = [pd.read_excel(f"./data/processed/03_gene_sets/{gene_set}") for gene_set in gene_set_paths]
-    df_combined = pd.concat([*df_list], axis=0)
-    num_entries = np.size(df_combined,0)
-    corr_matrix = np.zeros((num_entries*num_entries))
-
-    expressions = df_combined.iloc[:,10:15] if is_mcp else df_combined.iloc[:,4:10]
-
-    for i, (gene_a, gene_b) in enumerate(itertools.combinations(expressions.values.tolist(), 2)):
-        scipy.stats.pearsonr(gene_a, gene_b)
-        corr_matrix[i] = scipy.stats.pearsonr(gene_a, gene_b).statistic
-        if i % progress_increment == 0:
-            print(f"Progress: ({i} of {num_entries**2})", end="\r")
-            sys.stdout.write("\033[K")
-
-    corr_matrix = np.reshape(corr_matrix, (num_entries, num_entries))
-    output_name = "mcp" if is_mcp else "ctrl"
-    np.save(f"./data/processed/03_gene_sets/corr_matrix_{output_name}.npy", corr_matrix)
-
-def graph_corr(nodes, corr_matrix_file, title):
-    corr_matrix = np.load(corr_matrix_file)
-    auxin = pd.read_excel("./data/processed/03_gene_sets/P:auxin-activated signaling pathway.xlsx")
-    ethylene = pd.read_excel("./data/processed/03_gene_sets/P:ethylene-activated signaling pathway.xlsx")
-    df_combined = pd.concat([auxin, ethylene], axis=0, ignore_index=True)
-    
-
-    filter_matrix = abs(corr_matrix) > .999
-    # np_combined = df_combined.to_numpy()
-
-    G = nx.Graph()
-
-    # Plot nodes
-    print(len(df_combined))
-    G.add_node("Auxin", go_id={"auxin"}, go_node=True)
-    
-    G.add_node("Ethylene", go_id={"ethylene"}, go_node=True)
-    eth_nodes = [None] * np.size(ethylene,0)
-    parent_edges = []
-    for i, row in enumerate(ethylene["accession_number"]):
-        # if df_combined.loc[i,"accession_number"] in set(ethylene["accession_number"]):
-        G.add_node(row, go_id={"ethylene"}, go_node=False)
-        G.add_edge(row, "Ethylene", weight=2)
-        parent_edges.append((row, "Ethylene"))
-
-    for i, row in enumerate(auxin["accession_number"]):
-        # if df_combined.loc[i,"accession_number"] in set(auxin["accession_number"]):
-        if G.has_node(row):
-            G.nodes[row]["go_id"].add("auxin")
-        else:
-            G.add_node(row, go_id={"auxin"}, go_node=False)
-        G.add_edge(row, "Auxin", weight=2)
-
-        parent_edges.append((row, "Auxin"))
-
-    edgelist = []
-    for i, row in enumerate(corr_matrix):
-        for j, col in enumerate(row):
-            if (filter_matrix[i,j]) and (i != j):
-                u_node = df_combined.loc[i, "accession_number"]
-                v_node = df_combined.loc[j, "accession_number"]
-                G.add_edge(u_node, v_node)
-                edgelist.append((u_node, v_node))
-
-        if i % 100 == 0:
-            print(f"We are on row {i} of {np.size(corr_matrix,0)}")
-
-    G.remove_nodes_from(list(nx.isolates(G)))
-
-    pos = nx.spring_layout(
-        G, 
-        pos={
-            "Auxin": (20,0),
-            "Ethylene": (0,0)
-        },
-        fixed=["Auxin", "Ethylene"],
-        k=1,
-        threshold=1e-8,
-        )
-    
-    for go in ["auxin", "ethylene"]:
-        nx.draw_networkx_nodes(
-            G, pos, 
-            nodelist=[node for node, attr in G.nodes.data() if go in attr["go_id"] and not attr["go_node"]], 
-            node_color=("red" if go=="ethylene" else "blue"), 
-            node_size=10, 
-            alpha=0.25)
-    
-    nx.draw_networkx_edges(G, pos, edgelist=edgelist, edge_color="purple", alpha=0.25)
-    
-
-    print(f"Num edges: {G.number_of_edges()}")
-    print(f"Num nodes: {G.number_of_nodes()}")
-    plt.title(title)
-    plt.savefig(f"./figures/{title}", dpi=1000)
-    plt.show()
-
 def gsea(
     phenotype: list,
     gene_set_paths: dict[str, str],
     is_ctrl: bool,
     title_gsea: str,
     title_heatmap: str,
-    plot_enabled: bool=True):
+    calculate_rand: bool=False,
+    plot_enabled: bool=True,
+    path_rand_es_distribution: str="./data/processed/random_enrichment_score_distribution.csv"):
     """Outputs GSEA data
 
     The steps involved with GSEA go as follows:
@@ -283,12 +176,19 @@ def gsea(
         return df_output, max_es
         
     
-    def calculate_rand_es_distribution(df, gene_sets, p, max_es_og, num_rand_samples: int=1000, plot_enabled: bool=False):
+    def calculate_rand_es_distribution(df, 
+                                       gene_sets, 
+                                       p, 
+                                       max_es_og, 
+                                       num_rand_samples: int=1000, 
+                                       plot_enabled: bool=False,
+                                       path_rand_es_distribution: str="./data/processed/random_enrichment_score_distribution.csv"):
         # enrichment_scores = np.zeros((len(gene_sets), num_rand_samples))
         num_gene_sets = len(gene_sets)
         gene_set_names = np.empty((num_gene_sets*num_rand_samples), dtype=np.dtype("U32"))
         enrichment_scores = np.empty((num_gene_sets*num_rand_samples), dtype=np.float64)
         is_es_og_pos = [float(es[1]) > 0 for es in max_es_og]
+
         for i in range(num_rand_samples):
             print(f"Random ES Distribution Progress: {i} of {num_rand_samples} ({round(i/num_rand_samples*100, 2)}%)", end="\r")
             _, max_es = calculate_enrichment_score(df.sample(frac=1).reset_index(drop=True), gene_sets=gene_sets, p=p)
@@ -305,16 +205,25 @@ def gsea(
             "es": enrichment_scores
         })
 
-        # df_rand_es_distribution.to_csv("./data/processed/random_enrichment_score_distribution.csv")
+        df_rand_es_distribution.to_csv(path_rand_es_distribution)
         if plot_enabled:
             sns.histplot(data=df_rand_es_distribution, x="es", hue="gene_set_name", multiple="stack")
         # plt.show()
         return df_rand_es_distribution
     
-    def calculate_es_p_values(max_es, df_rand_es_distribution: pd.DataFrame, gene_sets, num_genes):
-        # df_pivot = df_rand_es_distribution.pivot(columns="gene_set_name", values="es")
-        # print(df_pivot)
-        plt.figure()
+    def calculate_es_p_values(max_es: np.ndarray, 
+                              df_rand_es_distribution: pd.DataFrame, 
+                              gene_sets: dict[str, set], 
+                              num_genes: int) -> pd.DataFrame:
+        """Calculate the statistical significance for gene set enrichment 
+        scores given the complete gene list
+
+        Args:
+            - max_es: Numpy array with shape (num_genes, 2) where column 0 is gene set name and 
+                column 1 is the max enrichment score
+            - df_rand_es_distribution: 
+
+        """
         p_values = []
         gene_set_names = []
         gene_set_ratios = []
@@ -322,7 +231,6 @@ def gsea(
             df_es_gene_set = df_rand_es_distribution[df_rand_es_distribution["gene_set_name"] == gene_set_name]
             cum_count = 0
             es_values = np.sort(df_es_gene_set["es"].values)
-            # print(es_values)
             counts, bin_edges = np.histogram(df_es_gene_set["es"].values, density=True)
             dx = bin_edges[1] - bin_edges[0]
             f1 = np.cumsum(counts)*dx
@@ -334,35 +242,6 @@ def gsea(
             p_values.append(1 - f1[p_value_index] if is_es_og_pos else f1[p_value_index])
             gene_set_names.append(gene_set_name)
             gene_set_ratios.append(len(gene_set)/num_genes)
-            # norm_cdf = scipy.stats.norm.cdf(es_values)
-            # mean_es = np.mean(es_values)
-            # es_max = float(max_es[i,1])
-            # if es_values[-1] < es_max:
-            #     p_value_index = len(es_values) - 1
-            #     p_value = 1 - norm_cdf[p_value_index]
-            # elif es_values[0] > es_max:
-            #     p_value_index = 0
-            #     p_value = norm_cdf[p_value_index]
-            # elif mean_es <= es_max:
-            #     p_value_index = np.argmax(es_values>float(max_es[i,1]))
-            #     p_value = 1 - norm_cdf[p_value_index]
-            # else:
-            #     p_value_index = np.argmax(es_values<float(max_es[i,1]))
-            #     p_value = norm_cdf[p_value_index]
-            # # print(es_values)
-            # print(p_value_index, norm_cdf[p_value_index], max_es[i,1], p_value)
-
-
-            # sns.lineplot(x=es_values, y=norm_cdf)
-            # plt.show()
-            
-            # for ix, bin_edge in enumerate(bin_edges):
-            #     print(max_es[i,1])
-            #     if float(bin_edge) < float(max_es[i,1]):
-            #         cum_count += counts[ix]
-            #     else:
-            #         break
-            # output.append(cum_count)
 
         output_df = pd.DataFrame({
             "gene_set_names": max_es[:,0],
@@ -370,8 +249,6 @@ def gsea(
             "p_values": p_values,
             "gene_ratio": gene_set_ratios
         })
-        print(output_df)
-        # pprint.pprint(p_values)
         output_df.to_csv("./data/processed/gsea_signaling_results.csv")
         return output_df
     
@@ -396,19 +273,25 @@ def gsea(
     # df_es_random = calculate_enrichment_score(sorted_df_corrs.sample(frac=1).reset_index(drop=True), gene_sets=gene_sets, p=1)
     # plt.plot(df_es_random.loc[:,gene_set_paths.keys()])
 
-    df_rand_es_distribution = calculate_rand_es_distribution(df_corrs, gene_sets, max_es_og=max_es, p=1)
+    if calculate_rand:
+        df_rand_es_distribution = calculate_rand_es_distribution(df_corrs, gene_sets, max_es_og=max_es, p=1)
+    else:
+        df_rand_es_distribution = pd.read_csv(path_rand_es_distribution)
     calculate_es_p_values(max_es, df_rand_es_distribution, gene_sets=gene_sets, num_genes=np.size(expressions,0))
 
     if plot_enabled:
-        plt.figure("Heat map")
+        plt.figure("Heat map", dpi=600)
         sns.heatmap(ranked_list[:,1:], cmap="vlag")
         plt.title(title_heatmap)
+        plt.savefig("./figures/ranked_heat_map.png")
 
-        plt.figure("GSEA")
+        plt.figure("GSEA", dpi=600)
         plt.title(title_gsea)
         plt.plot(df_es.loc[:,gene_set_paths.keys()])
         plt.legend(gene_set_paths.keys())
+        plt.savefig("./figures/gsea_enrichment_raw.png")
         plt.show()
+        
 
 def dotplot():
     df_gsea = pd.read_csv("./data/processed/gsea_signaling_results.csv")
